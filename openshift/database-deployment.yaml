@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database-deployment
+  labels:
+    app: database
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: database
+  template:
+    metadata:
+      labels:
+        app: database
+    spec:
+      affinity:
+        # 1. Direct this deployment specifically to Node A
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - node-a-name # <-- Replace with Node A's actual hostname
+        # 2a. Keep DB pods with each other (Affinity)
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - database
+                topologyKey: "kubernetes.io/hostname"
+        # 2b. Keep DB pods away from Application pods (Anti-Affinity)
+        # podAntiAffinity:
+          # preferredDuringSchedulingIgnoredDuringExecution:
+            # - weight: 100
+              # podAffinityTerm:
+                # labelSelector:
+                  # matchExpressions:
+                    # - key: app
+                      # operator: In
+                      # values:
+                        # - application
+                # topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: postgres
+          image: postgres:15
+          env:
+            - name: POSTGRES_PASSWORD
+              value: "example"

@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: application-deployment
+  labels:
+    app: application
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: application
+  template:
+    metadata:
+      labels:
+        app: application
+    spec:
+      affinity:
+        # 1. Direct this deployment specifically to Node B
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              preference:
+                matchExpressions:
+                  - key: kubernetes.io/hostname
+                    operator: In
+                    values:
+                      - node-b-name # <-- Replace with Node B's actual hostname
+        # 2a. Keep App pods with each other (Affinity)
+        podAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchExpressions:
+                    - key: app
+                      operator: In
+                      values:
+                        - application
+                topologyKey: "kubernetes.io/hostname"
+        # 2b. Keep App pods away from Database pods (Anti-Affinity)
+        # podAntiAffinity:
+          # preferredDuringSchedulingIgnoredDuringExecution:
+            # - weight: 100
+              # podAffinityTerm:
+                # labelSelector:
+                  # matchExpressions:
+                    # - key: app
+                      # operator: In
+                      # values:
+                        # - database
+                # topologyKey: "kubernetes.io/hostname"
+      containers:
+        - name: web-app
+          image: nginx:alpine
